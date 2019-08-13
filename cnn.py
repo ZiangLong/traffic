@@ -7,7 +7,7 @@ from torch.autograd import Variable as V
 import torch.optim as optim
 
 # loads in a dictionary of the matlab variables, as well as a few useless entries
-data_path = "../../data/24-Oct-2018_data.mat"
+data_path = "../data/24-Oct-2018_data.mat"
 loaded_data = io.loadmat(data_path)
 
 # remove useless entries
