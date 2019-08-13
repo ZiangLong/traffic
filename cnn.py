@@ -32,22 +32,7 @@ holidays = [
     datetime(2017,12,25),
 ]
 
-# t0 = starting time = 2017.1.1 00:00
-t0 = loaded_data['station_times'][0]
-# Time_Start: The time when incident happens
-ts = loaded_data['inc_timestamp']
-# type(dt) = [timedelta], dt = time duration between t0 and ts
-dt = [(t-t0) for t in ts]
-# type(t1) = [int], t1 = index of Time_Start
-t1 = [round(t.days * 288 + t.seconds / 300) for t in dt]
-# type(dt) = [int], incident duration in minutes
-dt = loaded_data['inc_duration'].flatten().tolist()
-# Time_End: The time when Incident End
-te = [t + timedelta(minutes=dt[i]) for i,t in enumerate(ts)]
-# type(dt) = [timedelta], dt = time duration between t0 and te
-dt = [(t-t0) for t in te]
-# type(t2) = [int]. i2 = index of Time_End
-t2 = [round(t.days * 288 + t.seconds / 300) + 1 for t in dt]
+
 
 
 ids = {x[0]:i for i,x in enumerate(list(loaded_data['station_ids'][0]))}
@@ -62,6 +47,10 @@ label = torch.zeros(365,1,10, device=device)
 # Normalized traffic data, set mean = 0, std var = 1
 dmean, dvar = data.mean(dim=0).unsqueeze(0), data.var(dim=0).unsqueeze(0).sqrt()
 data.add_(-dmean).div_(dvar * 2)
+
+
+# t0 = starting time = 2017.1.1 00:00
+t0 = loaded_data['station_times'][0]
 
 for h in holidays:
     label[(h-t0).days,:,:] = 1
@@ -92,20 +81,24 @@ if device == 'cuda':
     testdata = testdata.cuda()
     testlabel = testlabel.cuda()
 
-# Training accuracy
-def t_acc(net):
+# Training Score
+def t_score(net):
     with torch.no_grad():
         out = net(traindata).ge(0.5)
         ans = trainlabel.ge(0.5)
         score = 2 * out.mul(ans).sum().float() / (out.sum() + ans.sum()).float()
         return score.item()
 
-# Testing Accuracy
-def _acc(net, i=0):
+# Testing Score
+def _score(net, i=0):
     with torch.no_grad():
         num = float(testlabel.numel())
         out = net(testdata).ge(0.5)
         ans = testlabel.ge(0.5)
+        # x = |A \cap B|
+        # y = |A|
+        # z = |B|
+        # pcn = precision = x / y
         x = out.mul(ans).sum()
         y = out.sum()
         z = ans.sum()
@@ -136,7 +129,7 @@ class CNNClassifier(nn.Module):
         
 net = CNNClassifier()
 
-if torch.cuda.is_available():
+if device == 'cuda':
     net = net.cuda()
 
 opt = optim.Adam(net.parameters(),lr=1e-3)
@@ -158,4 +151,4 @@ for i in range(5000):
     L.backward()
     opt.step()
     sche.step()
-    _acc(net, i)
+    _score(net, i)
