@@ -93,20 +93,24 @@ class BRNNClassifier(nn.Module):
         out = self.hidden2out(out.relu())
         return out.sigmoid()
 
-# Training Accuracy
-def t_acc(net):
+# Training Score
+def t_score(net):
     with torch.no_grad():
         out = net(traindata).ge(0.5)
         ans = trainlabel.ge(0.5)
         score = 2 * out.mul(ans).sum().float() / (out.sum() + ans.sum()).float()
         return score.item()
 
-# Testing Accuracy
-def _acc(net, i=0):
+# Testing Score
+def _score(net, i=0):
     with torch.no_grad():
         num = float(testlabel.numel())
         out = net(testdata).ge(0.5)
         ans = testlabel.ge(0.5)
+        # x = |A \cap B|
+        # y = |A|
+        # z = |B|
+        # pcn = precision = x / y
         x = out.mul(ans).sum()
         y = out.sum()
         z = ans.sum()
@@ -141,4 +145,4 @@ for i in range(2000):
     L.backward()
     opt.step()
     sche.step()
-    _acc(net, i)
+    _score(net, i)
